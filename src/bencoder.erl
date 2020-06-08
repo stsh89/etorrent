@@ -3,7 +3,7 @@
 
 -type benint() :: {int, integer()}.
 -type benstr() :: {str, binary()}.
--type benlist() :: {list, list(int | str)}.
+-type benlist() :: {list, list(benint() | benstr())}.
 
 -spec decode(Data::binary()) -> benint() | benstr() | benlist() | {error, badarg}.
 decode(Data) ->
