@@ -1,22 +1,23 @@
 -module(bencoder).
 -export([decode/1]).
 
--spec decode(Data::binary()) ->
-  {integer, integer()} |
-  {string, binary()} |
-  {error, badarg}.
+-type benint() :: {int, integer()}.
+-type benstr() :: {str, binary()}.
+-type benlist() :: {list, list(int | str)}.
+
+-spec decode(Data::binary()) -> benint() | benstr() | benlist() | {error, badarg}.
 decode(Data) ->
   do_decode(Data).
 
 do_decode(<<"i", T/binary>>) ->
   case do_integer_decode([], T) of
-    {ok, Value} -> {integer, Value};
+    {ok, Value} -> {int, Value};
     {error, badarg} -> {error, badarg}
   end;
 
 do_decode(<<H, T/binary>>) when H >= $0, H =< $9 ->
   case do_string_decode([H], T) of
-    {ok, Value} -> {string, Value};
+    {ok, Value} -> {str, Value};
     {error, badarg} -> {error, badarg}
   end;
 
