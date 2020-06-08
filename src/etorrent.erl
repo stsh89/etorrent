@@ -5,5 +5,7 @@ start_link() ->
   gen_server:start_link(?MODULE, [], []).
 
 init([]) ->
-  io:format("Hello World~n"),
+  Res = bencoder:decode(list_to_binary("i32234e")),
+  io:write(Res),
+  io:format("~n"),
   halt(0).
