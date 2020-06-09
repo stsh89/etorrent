@@ -10,11 +10,19 @@ decode_integer_test() ->
   ?assertMatch({error, badarg}, bencoder:decode(<<"">>)),
   ?assertMatch({error, badarg}, bencoder:decode(<<"x">>)),
   ?assertMatch({error, badarg}, bencoder:decode(<<"e">>)),
-  ?assertMatch({error, badarg}, bencoder:decode(<<"i0">>)).
+  ?assertMatch({error, badarg}, bencoder:decode(<<"i0">>)),
+  ?assertMatch({error, badarg}, bencoder:decode(<<"i0ee">>)).
 
-decode_string_test() ->
-  ?assertMatch({str, <<"">>}, bencoder:decode(<<"0:">>)),
-  ?assertMatch({str, <<"test">>}, bencoder:decode(<<"4:test">>)),
-  ?assertMatch({str, <<"longstring">>}, bencoder:decode(<<"10:longstring">>)),
-  ?assertMatch({str, <<"broken">>}, bencoder:decode(<<"6:brokenstring">>)),
-  ?assertMatch({error, badarg}, bencoder:decode(<<"6:test">>)).
+%% decode_string_test() ->
+%%   ?assertMatch({str, <<>>}, bencoder:decode(<<"0:">>)),
+%%   ?assertMatch({str, <<"test">>}, bencoder:decode(<<"4:test">>)),
+%%   ?assertMatch({str, <<"longstring">>}, bencoder:decode(<<"10:longstring">>)),
+%%   ?assertMatch({str, <<"broken">>}, bencoder:decode(<<"6:brokenstring">>)),
+%%   ?assertMatch({error, badarg}, bencoder:decode(<<"6:test">>)).
+
+decode_list_test() ->
+  ?assertMatch({list, []}, bencoder:decode(<<"le">>)),
+  ?assertMatch({list, [{int, 0}]}, bencoder:decode(<<"li0ee">>)),
+  ?assertMatch({list, [{int, 0}, {int, 0}]}, bencoder:decode(<<"li0ei0ee">>)),
+  ?assertMatch({list, [{int, 0}, {int, 0}, {int, 0}]}, bencoder:decode(<<"li0ei0ei0ee">>)),
+  ?assertMatch({error, badarg}, bencoder:decode(<<"lee">>)).

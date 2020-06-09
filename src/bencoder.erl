@@ -7,39 +7,58 @@
 
 -spec decode(Data::binary()) -> benint() | benstr() | benlist() | {error, badarg}.
 decode(Data) ->
-  do_decode(Data).
+  case do_decode(Data) of
+    {BenitemCode, Value, <<>>} -> {BenitemCode, Value};
+    {_BenitemCode, _Value, _T} -> {error, badarg};
+    {error, badarg} -> {error, badarg}
+  end.
 
 do_decode(<<"i", T/binary>>) ->
   case do_integer_decode([], T) of
-    {ok, Value} -> {int, Value};
+    {ok, Value, Data} -> {int, Value, Data};
     {error, badarg} -> {error, badarg}
   end;
 
-do_decode(<<H, T/binary>>) when H >= $0, H =< $9 ->
-  case do_string_decode([H], T) of
-    {ok, Value} -> {str, Value};
+%% do_decode(<<H, T/binary>>) when H >= $0, H =< $9 ->
+%%   case do_string_decode([H], T) of
+%%     {ok, Value} -> {str, Value};
+%%     {error, badarg} -> {error, badarg}
+%%   end;
+
+do_decode(<<"l", T/binary>>) ->
+  case do_list_decode([], T) of
+    {ok, Value, Data} -> {list, Value, Data};
     {error, badarg} -> {error, badarg}
   end;
 
 do_decode(_) ->
   {error, badarg}.
 
-do_string_decode(Acc, <<":", T/binary>>) ->
-  try
-    {ok, binary:part(T, {0, list_to_integer(Acc)})}
-  catch
-    _:badarg ->
-      {error, badarg}
-  end;
+do_list_decode(Acc, <<"e", T/binary>>) ->
+  {ok, Acc, T};
 
-do_string_decode(Acc, <<H, T/binary>>) when H >= $0, H =< $9 ->
-  do_string_decode(Acc ++ [H], T);
+do_list_decode(Acc, Data) ->
+  case do_decode(Data) of
+    {BenitemCode, Value, T} -> do_list_decode(Acc ++ [{BenitemCode, Value}], T);
+    {error, badarg} -> {error, badarg}
+  end.
 
-do_string_decode(_Acc, _Data) ->
-  {error, badarg}.
+%% do_string_decode(Acc, <<":", T/binary>>) ->
+%%   try
+%%     {ok, binary:part(T, {0, list_to_integer(Acc)})}
+%%   catch
+%%     _:badarg ->
+%%       {error, badarg}
+%%   end;
 
-do_integer_decode(Acc, <<"e", _T/binary>>) ->
-  {ok, list_to_integer(Acc)};
+%% do_string_decode(Acc, <<H, T/binary>>) when H >= $0, H =< $9 ->
+%%   do_string_decode(Acc ++ [H], T);
+%%
+%% do_string_decode(_Acc, _Data) ->
+%%   {error, badarg}.
+
+do_integer_decode(Acc, <<"e", T/binary>>) ->
+  {ok, list_to_integer(Acc), T};
 
 do_integer_decode(Acc, <<H, T/binary>>) ->
   do_integer_decode(Acc ++ [H], T);
