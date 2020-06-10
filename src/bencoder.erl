@@ -3,9 +3,10 @@
 
 -type benint() :: {int, integer()}.
 -type benstr() :: {str, binary()}.
--type benlist() :: {list, list(benint() | benstr())}.
+-type benlist() :: {list, list(benitem())}.
+-type benitem() :: benint() | benstr() | benlist().
 
--spec decode(Data::binary()) -> benint() | benstr() | benlist() | {error, badarg}.
+-spec decode(Data::binary()) -> benitem() | {error, badarg}.
 decode(Data) ->
   case do_decode(Data) of
     {BenitemCode, Value, <<>>} -> {BenitemCode, Value};
@@ -19,11 +20,11 @@ do_decode(<<"i", T/binary>>) ->
     {error, badarg} -> {error, badarg}
   end;
 
-%% do_decode(<<H, T/binary>>) when H >= $0, H =< $9 ->
-%%   case do_string_decode([H], T) of
-%%     {ok, Value} -> {str, Value};
-%%     {error, badarg} -> {error, badarg}
-%%   end;
+do_decode(<<H, T/binary>>) when H >= $0, H =< $9 ->
+  case do_string_decode([H], T) of
+    {ok, Value, Data} -> {str, Value, Data};
+    {error, badarg} -> {error, badarg}
+  end;
 
 do_decode(<<"l", T/binary>>) ->
   case do_list_decode([], T) of
@@ -43,19 +44,23 @@ do_list_decode(Acc, Data) ->
     {error, badarg} -> {error, badarg}
   end.
 
-%% do_string_decode(Acc, <<":", T/binary>>) ->
-%%   try
-%%     {ok, binary:part(T, {0, list_to_integer(Acc)})}
-%%   catch
-%%     _:badarg ->
-%%       {error, badarg}
-%%   end;
+do_string_decode(Acc, <<":", T/binary>>) ->
+  do_string_reduce([], list_to_integer(Acc), T);
 
-%% do_string_decode(Acc, <<H, T/binary>>) when H >= $0, H =< $9 ->
-%%   do_string_decode(Acc ++ [H], T);
-%%
-%% do_string_decode(_Acc, _Data) ->
-%%   {error, badarg}.
+do_string_decode(Acc, <<H, T/binary>>) when H >= $0, H =< $9 ->
+  do_string_decode(Acc ++ [H], T);
+
+do_string_decode(_Acc, _Data) ->
+  {error, badarg}.
+
+do_string_reduce(_Acc, Times, <<>>) when Times > 0 ->
+  {error, badarg};
+
+do_string_reduce(Acc, 0, Data) ->
+  {ok, list_to_binary(Acc), Data};
+
+do_string_reduce(Acc, Times, <<H, T/binary>>) ->
+  do_string_reduce(Acc ++ [H], Times - 1, T).
 
 do_integer_decode(Acc, <<"e", T/binary>>) ->
   {ok, list_to_integer(Acc), T};
