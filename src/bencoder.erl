@@ -3,8 +3,9 @@
 
 -type benint() :: {int, integer()}.
 -type benstr() :: {str, binary()}.
--type benlist() :: {list, list(benitem())}.
--type benitem() :: benint() | benstr() | benlist().
+-type benlist() :: {list, list()}.
+-type bendict() :: {dict, #{}}.
+-type benitem() :: benint() | benstr() | benlist() | bendict().
 
 -spec decode(Data::binary()) -> benitem() | {error, badarg}.
 decode(Data) ->
@@ -32,8 +33,29 @@ do_decode(<<"l", T/binary>>) ->
     {error, badarg} -> {error, badarg}
   end;
 
+do_decode(<<"d", T/binary>>) ->
+  case do_dict_decode(#{}, T) of
+    {ok, Value, Data} -> {dict, Value, Data};
+    {error, badarg} -> {error, badarg}
+  end;
+
 do_decode(_) ->
   {error, badarg}.
+
+do_dict_decode(Acc, <<"e", T/binary>>) ->
+  {ok, Acc, T};
+
+do_dict_decode(Acc, <<H, T/binary>>) ->
+  case do_string_decode([H], T) of
+    {ok, Key, Data} ->
+      case do_decode(Data) of
+        {BenitemCode, Value, L} ->
+          do_dict_decode(maps:put({str, Key}, {BenitemCode, Value}, Acc), L);
+        {error, badarg} ->
+          {error, badarg}
+      end;
+    {error, badarg} -> {error, badarg}
+  end.
 
 do_list_decode(Acc, <<"e", T/binary>>) ->
   {ok, Acc, T};

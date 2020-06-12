@@ -26,3 +26,14 @@ decode_list_test() ->
   ?assertMatch({list, [{int, 0}, {int, 0}]}, bencoder:decode(<<"li0ei0ee">>)),
   ?assertMatch({list, [{int, 0}, {int, 0}, {int, 0}]}, bencoder:decode(<<"li0ei0ei0ee">>)),
   ?assertMatch({error, badarg}, bencoder:decode(<<"lee">>)).
+
+decode_dict_test() ->
+  ?assertMatch({dict, #{}}, bencoder:decode(<<"de">>)),
+
+  {Kind, Map} = bencoder:decode(<<"d4:namei0ee">>),
+  ?assertMatch(dict, Kind),
+  ?assertMatch({int, 0}, maps:get({str, <<"name">>}, Map)),
+
+  {Kind1, Map1} = bencoder:decode(<<"d4:name4:Stane">>),
+  ?assertMatch(dict, Kind1),
+  ?assertMatch({str, <<"Stan">>}, maps:get({str, <<"name">>}, Map1)).
