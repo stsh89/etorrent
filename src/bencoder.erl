@@ -1,4 +1,5 @@
 -module(bencoder).
+
 -export([decode/1]).
 
 -type benint() :: {int, integer()}.
@@ -7,91 +8,92 @@
 -type bendict() :: {dict, #{}}.
 -type benitem() :: benint() | benstr() | benlist() | bendict().
 
--spec decode(Data::binary()) -> benitem() | {error, badarg}.
+-spec decode(Data :: binary()) -> benitem() | {error, badarg}.
 decode(<<Data/binary>>) ->
   case do_decode(Data) of
-    {BenitemCode, Value, <<>>} -> {BenitemCode, Value};
-    {_BenitemCode, _Value, _T} -> {error, badarg};
-    {error, badarg} -> {error, badarg}
+    {BenitemCode, Value, <<>>} ->
+      {BenitemCode, Value};
+    {_BenitemCode, _Value, _T} ->
+      {error, badarg};
+    {error, badarg} ->
+      {error, badarg}
   end.
 
 do_decode(<<"i", T/binary>>) ->
-  case do_integer_decode([], T) of
-    {ok, Value, Data} -> {int, Value, Data};
-    {error, badarg} -> {error, badarg}
+  case decode_integer([], T) of
+    {ok, Value, Data} ->
+      {int, Value, Data};
+    {error, badarg} ->
+      {error, badarg}
   end;
-
 do_decode(<<H, T/binary>>) when H >= $0, H =< $9 ->
-  case do_string_decode([H], T) of
-    {ok, Value, Data} -> {str, Value, Data};
-    {error, badarg} -> {error, badarg}
+  case decode_string([H], T) of
+    {ok, Value, Data} ->
+      {str, Value, Data};
+    {error, badarg} ->
+      {error, badarg}
   end;
-
 do_decode(<<"l", T/binary>>) ->
-  case do_list_decode([], T) of
-    {ok, Value, Data} -> {list, Value, Data};
-    {error, badarg} -> {error, badarg}
+  case decode_list([], T) of
+    {ok, Value, Data} ->
+      {list, Value, Data};
+    {error, badarg} ->
+      {error, badarg}
   end;
-
 do_decode(<<"d", T/binary>>) ->
-  case do_dict_decode(#{}, T) of
-    {ok, Value, Data} -> {dict, Value, Data};
-    {error, badarg} -> {error, badarg}
+  case decode_dict(#{}, T) of
+    {ok, Value, Data} ->
+      {dict, Value, Data};
+    {error, badarg} ->
+      {error, badarg}
   end;
-
 do_decode(<<_Data/binary>>) ->
   {error, badarg}.
 
-do_dict_decode(Acc, <<"e", T/binary>>) ->
+decode_dict(Acc, <<"e", T/binary>>) ->
   {ok, Acc, T};
-
-do_dict_decode(Acc, <<H, T/binary>>) ->
-  case do_string_decode([H], T) of
+decode_dict(Acc, <<H, T/binary>>) ->
+  case decode_string([H], T) of
     {ok, Key, Data} ->
       case do_decode(Data) of
         {BenitemCode, Value, L} ->
-          do_dict_decode(maps:put({str, Key}, {BenitemCode, Value}, Acc), L);
+          decode_dict(maps:put({str, Key}, {BenitemCode, Value}, Acc), L);
         {error, badarg} ->
           {error, badarg}
       end;
-    {error, badarg} -> {error, badarg}
+    {error, badarg} ->
+      {error, badarg}
   end.
 
-do_list_decode(Acc, <<"e", T/binary>>) ->
+decode_list(Acc, <<"e", T/binary>>) ->
   {ok, lists:reverse(Acc), T};
-
-do_list_decode(Acc, <<Data/binary>>) ->
+decode_list(Acc, <<Data/binary>>) ->
   case do_decode(Data) of
-    {BenitemCode, Value, T} -> do_list_decode([{BenitemCode, Value} | Acc], T);
-    {error, badarg} -> {error, badarg}
+    {BenitemCode, Value, T} ->
+      decode_list([{BenitemCode, Value} | Acc], T);
+    {error, badarg} ->
+      {error, badarg}
   end.
 
-do_string_decode(Acc, <<":", T/binary>>) ->
-  do_string_reduce([], list_to_integer(lists:reverse(Acc)), T);
-
-do_string_decode(Acc, <<H, T/binary>>) when H >= $0, H =< $9 ->
-  do_string_decode([H | Acc], T);
-
-do_string_decode(_Acc, <<_Data/binary>>) ->
+decode_string(Acc, <<":", T/binary>>) ->
+  reduce_string([], list_to_integer(lists:reverse(Acc)), T);
+decode_string(Acc, <<H, T/binary>>) when H >= $0, H =< $9 ->
+  decode_string([H | Acc], T);
+decode_string(_Acc, <<_Data/binary>>) ->
   {error, badarg}.
 
-do_string_reduce(_Acc, Times, <<>>) when Times > 0 ->
+reduce_string(_Acc, Times, <<>>) when Times > 0 ->
   {error, badarg};
-
-do_string_reduce(Acc, 0, <<Data/binary>>) ->
+reduce_string(Acc, 0, <<Data/binary>>) ->
   {ok, list_to_binary(lists:reverse(Acc)), Data};
+reduce_string(Acc, Times, <<H, T/binary>>) ->
+  reduce_string([H | Acc], Times - 1, T).
 
-do_string_reduce(Acc, Times, <<H, T/binary>>) ->
-  do_string_reduce([H | Acc], Times - 1, T).
-
-do_integer_decode(Acc, <<"e", T/binary>>) ->
+decode_integer(Acc, <<"e", T/binary>>) ->
   {ok, list_to_integer(lists:reverse(Acc)), T};
-
-do_integer_decode(Acc, <<H, T/binary>>) ->
-  do_integer_decode([H | Acc], T);
-
-do_integer_decode(_Acc, <<>>) ->
+decode_integer(Acc, <<H, T/binary>>) ->
+  decode_integer([H | Acc], T);
+decode_integer(_Acc, <<>>) ->
   {error, badarg};
-
-do_integer_decode(_Acc, <<_Data/binary>>) ->
+decode_integer(_Acc, <<_Data/binary>>) ->
   {error, badarg}.
