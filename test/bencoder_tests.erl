@@ -23,7 +23,7 @@ decode_string_test() ->
 decode_list_test() ->
   ?assertMatch({list, []}, bencoder:decode(<<"le">>)),
   ?assertMatch({list, [{int, 0}]}, bencoder:decode(<<"li0ee">>)),
-  ?assertMatch({list, [{int, 0}, {int, 0}]}, bencoder:decode(<<"li0ei0ee">>)),
+  ?assertMatch({list, [{int, 0}, {int, 1}]}, bencoder:decode(<<"li0ei1ee">>)),
   ?assertMatch({list, [{int, 0}, {int, 0}, {int, 0}]}, bencoder:decode(<<"li0ei0ei0ee">>)),
   ?assertMatch({error, badarg}, bencoder:decode(<<"lee">>)).
 

@@ -8,7 +8,7 @@
 -type benitem() :: benint() | benstr() | benlist() | bendict().
 
 -spec decode(Data::binary()) -> benitem() | {error, badarg}.
-decode(Data) ->
+decode(<<Data/binary>>) ->
   case do_decode(Data) of
     {BenitemCode, Value, <<>>} -> {BenitemCode, Value};
     {_BenitemCode, _Value, _T} -> {error, badarg};
@@ -39,7 +39,7 @@ do_decode(<<"d", T/binary>>) ->
     {error, badarg} -> {error, badarg}
   end;
 
-do_decode(_) ->
+do_decode(<<_Data/binary>>) ->
   {error, badarg}.
 
 do_dict_decode(Acc, <<"e", T/binary>>) ->
@@ -58,40 +58,40 @@ do_dict_decode(Acc, <<H, T/binary>>) ->
   end.
 
 do_list_decode(Acc, <<"e", T/binary>>) ->
-  {ok, Acc, T};
+  {ok, lists:reverse(Acc), T};
 
-do_list_decode(Acc, Data) ->
+do_list_decode(Acc, <<Data/binary>>) ->
   case do_decode(Data) of
-    {BenitemCode, Value, T} -> do_list_decode(Acc ++ [{BenitemCode, Value}], T);
+    {BenitemCode, Value, T} -> do_list_decode([{BenitemCode, Value} | Acc], T);
     {error, badarg} -> {error, badarg}
   end.
 
 do_string_decode(Acc, <<":", T/binary>>) ->
-  do_string_reduce([], list_to_integer(Acc), T);
+  do_string_reduce([], list_to_integer(lists:reverse(Acc)), T);
 
 do_string_decode(Acc, <<H, T/binary>>) when H >= $0, H =< $9 ->
-  do_string_decode(Acc ++ [H], T);
+  do_string_decode([H | Acc], T);
 
-do_string_decode(_Acc, _Data) ->
+do_string_decode(_Acc, <<_Data/binary>>) ->
   {error, badarg}.
 
 do_string_reduce(_Acc, Times, <<>>) when Times > 0 ->
   {error, badarg};
 
-do_string_reduce(Acc, 0, Data) ->
-  {ok, list_to_binary(Acc), Data};
+do_string_reduce(Acc, 0, <<Data/binary>>) ->
+  {ok, list_to_binary(lists:reverse(Acc)), Data};
 
 do_string_reduce(Acc, Times, <<H, T/binary>>) ->
-  do_string_reduce(Acc ++ [H], Times - 1, T).
+  do_string_reduce([H | Acc], Times - 1, T).
 
 do_integer_decode(Acc, <<"e", T/binary>>) ->
-  {ok, list_to_integer(Acc), T};
+  {ok, list_to_integer(lists:reverse(Acc)), T};
 
 do_integer_decode(Acc, <<H, T/binary>>) ->
-  do_integer_decode(Acc ++ [H], T);
+  do_integer_decode([H | Acc], T);
 
 do_integer_decode(_Acc, <<>>) ->
   {error, badarg};
 
-do_integer_decode(_Acc, _Data) ->
+do_integer_decode(_Acc, <<_Data/binary>>) ->
   {error, badarg}.
