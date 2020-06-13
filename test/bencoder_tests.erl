@@ -25,6 +25,8 @@ decode_list_test() ->
   ?assertMatch({list, [{int, 0}]}, bencoder:decode(<<"li0ee">>)),
   ?assertMatch({list, [{int, 0}, {int, 1}]}, bencoder:decode(<<"li0ei1ee">>)),
   ?assertMatch({list, [{int, 0}, {int, 0}, {int, 0}]}, bencoder:decode(<<"li0ei0ei0ee">>)),
+  ?assertMatch({list, [{str, <<"test">>}]}, bencoder:decode(<<"l4:teste">>)),
+  ?assertMatch({list, [{str, <<"test">>}, {int, 0}]}, bencoder:decode(<<"l4:testi0ee">>)),
   ?assertMatch({error, badarg}, bencoder:decode(<<"lee">>)).
 
 decode_dict_test() ->
